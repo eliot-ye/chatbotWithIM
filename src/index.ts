@@ -1,21 +1,13 @@
 import path from "path";
 import express from "express";
+import bodyParser from "body-parser";
 import routes from "./routes";
 import { envConfig } from "./config";
 
 const app = express();
 
 async function main() {
-  app.use(function (req, res, next) {
-    var data = "";
-    req.on("data", function (chunk) {
-      data += chunk;
-    });
-    req.on("end", function () {
-      req.body = data;
-      next();
-    });
-  });
+  app.use(bodyParser.text({ type: "text/xml" }));
   app.use(express.static(path.join(__dirname, "../public")));
   routes(app);
 

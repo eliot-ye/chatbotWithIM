@@ -1,0 +1,19 @@
+POST http://10.0.4.133:3000/api/v1/chat/completions
+content-type: application/json
+Authorization: Bearer fastgpt-dxB4IEJpGjmbyRoGDsOTcmd0E4ctdg72
+
+{
+    "chatId": "variables.chatId",
+    "stream": false,
+    "detail": false,
+    "variables": {
+        "uid": "variables.uid",
+        "name": "詹三"
+    },
+    "messages": [
+        {
+            "content": "hi",
+            "role": "user"
+        }
+    ]
+}

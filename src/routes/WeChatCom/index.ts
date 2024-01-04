@@ -58,24 +58,13 @@ router.post("/v1", async (req, res) => {
     // 把解密后 xml 消息体字符串，解析成 json
     let callbackDataBody = parseXML.parse(messageXML).xml;
 
-    const fastRes = await fast_gpt_chat(
-      {
-        uid: callbackDataBody.FromUserName,
-        name: callbackDataBody.FromUserName,
-        chatId: `${callbackDataBody.ToUserName}-${callbackDataBody.FromUserName}`,
-      },
-      [{ role: "user", content: callbackDataBody.Content }]
-    );
-
     const message = `
     <xml>
       <ToUserName>${callbackDataBody.FromUserName}</ToUserName>
       <FromUserName>${callbackDataBody.ToUserName}</FromUserName> 
       <CreateTime>${new Date().getTime()}</CreateTime>
       <MsgType>${callbackDataBody.MsgType}</MsgType>
-      <Content>${fastRes.choices
-        .map((_item) => _item.message.content)
-        .join("\n")}</Content>
+      <Content>666: ${callbackDataBody.Content}</Content>
     </xml>`;
 
     const sendStrEncrypt = encrypt(

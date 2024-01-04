@@ -2,6 +2,7 @@ import { decrypt, getSignature, encrypt } from "@wecom/crypto";
 import "dotenv/config";
 import { Router } from "express";
 import { XMLParser } from "fast-xml-parser";
+import { fast_gpt_chat } from "../../chatbot-engine/fastgpt";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.get("/v1", (req, res) => {
   }
 });
 
-router.post("/v1", (req, res) => {
+router.post("/v1", async (req, res) => {
   const parseXML = new XMLParser();
   const { msg_signature, timestamp, nonce } = req.query;
 
@@ -57,24 +58,45 @@ router.post("/v1", (req, res) => {
     // 把解密后 xml 消息体字符串，解析成 json
     let callbackDataBody = parseXML.parse(messageXML).xml;
 
+    const fastRes = await fast_gpt_chat(
+      {
+        uid: callbackDataBody.FromUserName,
+        name: callbackDataBody.FromUserName,
+        chatId: `${callbackDataBody.ToUserName}-${callbackDataBody.FromUserName}`,
+      },
+      [{ role: "user", content: callbackDataBody.Content }]
+    );
+
     const message = `
     <xml>
-      <ToUserName>${callbackDataBody.ToUserName}</ToUserName>
-      <FromUserName>${callbackDataBody.FromUserName}</FromUserName> 
+      <ToUserName>${callbackDataBody.FromUserName}</ToUserName>
+      <FromUserName>${callbackDataBody.ToUserName}</FromUserName> 
       <CreateTime>${new Date().getTime()}</CreateTime>
       <MsgType>${callbackDataBody.MsgType}</MsgType>
-      <Content>666: ${callbackDataBody.Content}</Content>
+      <Content>${fastRes.choices
+        .map((_item) => _item.message.content)
+        .join("\n")}</Content>
     </xml>`;
+
+    const sendStrEncrypt = encrypt(
+      process.env.wechatcom_encodingAESKey!,
+      message,
+      id,
+      random
+    );
+    const sendStrTimestamp = new Date().getTime();
+    const sendStrSignature = getSignature(
+      process.env.wechatcom_token || "",
+      sendStrTimestamp,
+      nonce as string,
+      sendStrEncrypt
+    );
     const sendStr = `
     <xml> 
-      <ToUserName>${body.ToUserName}</ToUserName>
-      <AgentID>${body.AgentID}</AgentID>
-      <Encrypt>${encrypt(
-        process.env.wechatcom_encodingAESKey!,
-        message,
-        id,
-        random
-      )}</Encrypt>
+      <Nonce>${nonce}</Nonce>
+      <TimeStamp>${sendStrTimestamp}</TimeStamp>
+      <MsgSignature>${sendStrSignature}</MsgSignature>
+      <Encrypt>${sendStrEncrypt}</Encrypt>
     </xml>`;
 
     res.send(sendStr);
